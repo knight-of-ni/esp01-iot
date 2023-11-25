@@ -132,8 +132,9 @@ void gettemperature() {
     temp_f = dht.readTemperature(true);     // Read temperature as Fahrenheit
     // Check if any reads failed and exit early (to try again).
     if (isnan(humidity) || isnan(temp_f)) {
+      Fstr="";
+      Hstr="";
       DEBUGln("Failed to read from DHT sensor!");
-      return;
     } else {
       dtostrf(temp_f, 3,2, Fchar);
       dtostrf(humidity, 3,2, Hchar);
@@ -141,6 +142,12 @@ void gettemperature() {
       Hstr=String(Hchar);
     }
   }
+}
+
+void LightSleep(unsigned long millisec) {
+  // With LIGHT_SLEEP enabled, the esp should sleep when delay is called
+  wifi_set_sleep_type(LIGHT_SLEEP_T);
+  delay(millisec);
 }
 
 void setup() {
@@ -287,17 +294,14 @@ void setup() {
 }
  
 void loop() {
-      // With LIGHT_SLEEP enabled, the esp should sleep when delay is called
-      wifi_set_sleep_type(LIGHT_SLEEP_T);
-
       gettemperature();
       WiFiStatus();
 
       if ( Fstr.length() && Hstr.length() ) { // Don't send if we don't have any data
         sendToSC();
-        delay(UPDATEINTERVAL); // light_sleep after sending data
+        LightSleep(UPDATEINTERVAL); // light_sleep after sending data
       } else {
         DEBUGln("Temp and/or Humidty values are empty. Skip sending to Security Center...");
-        delay(INTERVAL); // light_sleep for 2 seconds then try to read from the dht again
+        LightSleep(INTERVAL); // light_sleep for 2 seconds then try to read from the dht again
       }
 } 
