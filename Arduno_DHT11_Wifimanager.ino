@@ -150,12 +150,23 @@ void handle_root() {
   Msg += "<a href=\"/error\">/error</a><br>";
   Msg += "<a href=\"/success\">/success</a><br>";
   Msg += "<a href=\"/status\">/status</a><br>";
+  Msg += "<a href=\"/resetwifi\">/resetwifi</a><br>";
   Msg += "<a href=\"/temp\">/temp</a><br>";
   Msg += "<a href=\"/humidity\">/humidity</a><br>";
   server.send(200, "text/html", htmlHead+Msg+htmlTail);
   delay(100);
 }
- 
+
+// Returns the mac address without colons
+String getMacAddress() {
+  uint8_t baseMac[6];
+  char baseMacChr[12];
+
+  WiFi.macAddress(baseMac);
+  sprintf(baseMacChr, "%02X%02X%02X%02X%02X%02X", baseMac[0], baseMac[1], baseMac[2], baseMac[3], baseMac[4], baseMac[5]);
+  return String(baseMacChr);
+}
+
 void setup(void)
 {
   // You can open the Arduino IDE Serial Monitor window to see what the code is doing
@@ -333,6 +344,22 @@ void setup(void)
                                            "Number of Consecutive Network Errors: "+netFails+"<br>"+
                                             htmlTail);
     });
+
+  server.on("/resetwifi", []() {
+    if (!server.authenticate("genetec", getMacAddress().c_str())) {  // password is the mac address w/o colons
+      return server.requestAuthentication(DIGEST_AUTH, "esp8266", "Authentication Failed");
+    }
+
+    server.send(200, "text/html", htmlHead+"WiFi credentials have been cleared and the device is rebooting into AP mode.<br>"+
+                                           "Please close your browser now."+
+                                           htmlTail);
+    delay(100);
+    WiFi.persistent(true);
+    WiFi.disconnect(true);
+    WiFi.persistent(false);
+    ESP.restart();
+    delay(5000);
+  });
 
   server.begin();
   successMsg = "HTTP server started";
